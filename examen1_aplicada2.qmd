@@ -135,6 +135,7 @@ system.time(
       metrics=metric_set(recall, precision, accuracy, f_meas, roc_auc)
     )
 )
+grid_results <- readRDS("grid_results.rds")
 
 ### Estracción mejor modelo
 
