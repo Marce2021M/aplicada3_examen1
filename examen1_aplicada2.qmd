@@ -105,7 +105,7 @@ all_workflows <- workflow_set(
 
 # Conjuntos de cross validation
 
-cv <- vfold_cv(train_data, v = 5, strata = "label")
+cv <- vfold_cv(train_data, v = 7, strata = "label")
 
 grid_vals <- tibble(num_comp = 1:100)
 
@@ -142,14 +142,14 @@ system.time(
 
 best_resultsNBAYES <- 
   grid_results |> 
-  extract_workflow_set_result("NB") |> 
+  extract_workflow_set_result("receta_NB") |> 
   select_best(metric = "roc_auc")
 
 best_resultsNBAYES
 
 NBAYES_test_results <- 
    grid_results |> 
-   extract_workflow("NB") |> 
+   extract_workflow("receta_NB") |> 
    finalize_workflow(best_resultsNBAYES) |> 
    fit(base_train)
 
@@ -157,14 +157,14 @@ NBAYES_test_results <-
 
 best_resultsLR <- 
   grid_results |> 
-  extract_workflow_set_result("LR") |> 
+  extract_workflow_set_result("receta_LR") |> 
   select_best(metric = "roc_auc")
 
 best_resultsLR
 
 LR_test_results <- 
    grid_results |> 
-   extract_workflow("LR") |> 
+   extract_workflow("receta_LR") |> 
    finalize_workflow(best_resultsLR) |> 
    fit(base_train)#NB
 
@@ -173,14 +173,14 @@ LR_test_results <-
 
 best_resultsQDA <- 
   grid_results |> 
-  extract_workflow_set_result("QDA") |> 
+  extract_workflow_set_result("receta_QDA") |> 
   select_best(metric = "roc_auc")
 
 best_resultsQDA
 
 QDA_test_results <- 
    grid_results |> 
-   extract_workflow("QDA") |> 
+   extract_workflow("receta_QDA") |> 
    finalize_workflow(best_resultsQDA) |> 
    fit(base_train)
 
@@ -188,14 +188,14 @@ QDA_test_results <-
 
 best_resultsLDA <- 
   grid_results |> 
-  extract_workflow_set_result("LDA") |> 
+  extract_workflow_set_result("receta_LDA") |> 
   select_best(metric = "roc_auc")
 
 best_resultsLDA
 
 LDA_test_results <- 
    grid_results |> 
-   extract_workflow("LDA") |> 
+   extract_workflow("receta_LDA") |> 
    finalize_workflow(best_resultsLDA) |> 
    fit(base_train)
 
