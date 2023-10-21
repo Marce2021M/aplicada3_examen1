@@ -1,0 +1,16 @@
+---
+title: "Estadística Aplicada 3 - Examen 1"
+lang: es
+author: "Marcelino"
+date: today
+header-includes:
+  - \usepackage{listings}
+  - \usepackage{color} % si aún no lo has incluido; es necesario para \textcolor
+  - \lstset{breaklines=true, postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space}}
+
+format:
+  html:
+    page-layout: full
+    embed-resources: true
+---
+
