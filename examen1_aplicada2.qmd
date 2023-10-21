@@ -31,6 +31,15 @@ data2 <- iris
 
 # Ejercicio 1
 
+En este reporte se creó un clasificador con la base de datos ```MNIST``` (Modified National Institute of Standards and Technology), esta base es uno de los conjuntos de datos más icónicos en el campo del aprendizaje automático y la visión por computadora. Se compone de un conjunto de imágenes en escala de grises de dígitos escritos a mano, del 0 al 9, y ha sido ampliamente utilizada para entrenar diversos modelos de reconocimiento de imágenes. MNIST contiene 70,000 imágenes en total, divididas en 60,000 imágenes de entrenamiento y 10,000 imágenes de prueba. Cada imagen tiene un tamaño de 28x28 píxeles, lo que da un total de 784 píxeles por imagen. 
+
+El objetivo de este clasificador era predecir si una imagen contenía un 1, 3 o 5. Para lograr encontrar el mejor clasificador primero se prepararon los datos de tal forma que la variable respuesta fuera de tipo factor y los regresores fueran los pixeles de la imagen. Posteriormente, se procedió a dividir la base de datos en un conjunto de entrenamiento, validación y prueba. El conjunto de entrenamiento y validación se utilizó para encontrar el mejor modelo y el conjunto de prueba para evaluar el desempeño del modelo. Además, como la base de datos era muy grande en cuanto al número de regresores potenciales, se decidió reducir la dimensionalidad de los datos con PCA.
+
+
+
+ Los modelos que se utilizaron para encontrar el mejor clasificador fueron: LDA, QDA, Naive Bayes y Regresión Logística. 
+
+
 ```{r,  message=FALSE, warning=FALSE, cache=TRUE}
 #Extraer el train y test
 
@@ -91,10 +100,37 @@ lr_spec <- logistic_reg() |>
 # Preparamos recetas
 
 rec <- recipe(label ~ ., data = train_data) %>%
+    #step_zv(all_predictors()) %>%
   step_center(all_predictors()) %>%
   step_scale(all_predictors()) %>%
-  step_pca(all_predictors(), num_comp = tune())
+  step_pca(all_predictors(), num_comp=100)
 
+prep_rec <- prep(rec, training = train_data)
+
+train_data_pca <- bake(prep_rec, new_data = train_data)
+
+# Get variance explained by each component
+pca_variance <- tidy(prep_rec, number = 3, type = "variance")
+
+filtered_data <- pca_variance[pca_variance$terms == "variance", ]
+library(ggplot2)
+
+ggplot(filtered_data, aes(x = component, y = value)) +
+  geom_line() +
+  geom_point() +
+  labs(title = "Scree Plot",
+       x = "Principal Component",
+       y = "Cumulative Percent Variance Explained") +
+  theme_minimal() +
+  geom_vline(aes(xintercept=50), color="red", linetype="dashed")
+
+#arreglamos receta a 50 componentes
+
+rec <- recipe(label ~ ., data = train_data) %>%
+    #step_zv(all_predictors()) %>%
+  step_center(all_predictors()) %>%
+  step_scale(all_predictors()) %>%
+  step_pca(all_predictors(), num_comp=50)
 
 # Preparamos workflows
 
@@ -106,8 +142,6 @@ all_workflows <- workflow_set(
 # Conjuntos de cross validation
 
 cv <- vfold_cv(train_data, v = 7, strata = "label")
-
-grid_vals <- tibble(num_comp = 1:100)
 
 # Grid de hiperparámetros
 grid_ctrl <-
@@ -129,7 +163,6 @@ system.time(
     workflow_map(
       seed = 191654,
       resamples = cv,
-      grid = grid_vals,
       control = grid_ctrl,
       verbose=TRUE,
       metrics=metric_set(recall, precision, accuracy, f_meas, roc_auc)
