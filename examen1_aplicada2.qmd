@@ -14,7 +14,7 @@ format:
     embed-resources: true
 ---
 
-```{r, message=FALSE, warning=FALSE}
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 #Cargamos paquetes
 library(tidymodels)
 library(discrim)
@@ -39,7 +39,7 @@ Además, como la base de datos era muy grande en cuanto al número de regresores
 
 
 
-```{r,  message=FALSE, warning=FALSE, cache=TRUE}
+```{r, include=FALSE, message=FALSE, warning=FALSE}
 #Extraer el train y test
 
 ## Preparamos los datos
@@ -98,13 +98,15 @@ lr_spec <- logistic_reg() %>%
 
 
 
-# Preparamos recetas
+# Preparamos receta
 
 rec <- recipe(label ~ ., data = train_data) %>%
     #step_zv(all_predictors()) %>%
   step_center(all_predictors()) %>%
   step_scale(all_predictors()) %>%
   step_pca(all_predictors(), num_comp=100)
+
+# Realizamos PCA
 
 prep_rec <- prep(rec, training = train_data)
 
@@ -114,7 +116,6 @@ train_data_pca <- bake(prep_rec, new_data = train_data)
 pca_variance <- tidy(prep_rec, number = 3, type = "variance")
 
 filtered_data <- pca_variance[pca_variance$terms == "variance", ]
-library(ggplot2)
 
 ggplot(filtered_data, aes(x = component, y = value)) +
   geom_line() +
@@ -135,113 +136,63 @@ rec <- recipe(label ~ ., data = train_data) %>%
 
 # Preparamos workflows
 
-all_workflows <- workflow_set(
-  preproc = list(receta =rec ), 
-  models = list(LDA = lda_spec, QDA = qda_spec, NB = nb_spec, LR = lr_spec)
-)
-
-# Conjuntos de cross validation
-
-cv <- vfold_cv(train_data, v = 7, strata = "label")
-
-# Grid de hiperparámetros
-grid_ctrl <-
-  control_grid(
-    save_pred = TRUE,
-    parallel_over = "resamples",
-    save_workflow = TRUE,
-    verbose=TRUE,
-
-  )
-
-all_cores <- parallel::detectCores(logical = TRUE) - 3
-library(doParallel)
-cl <- makePSOCKcluster(all_cores)
-registerDoParallel(cl)
-
-system.time(
-  grid_results <- all_workflows |>
-    workflow_map(
-      seed = 191654,
-      resamples = cv,
-      control = grid_ctrl,
-      verbose=TRUE,
-      metrics=metric_set(recall, precision, accuracy, f_meas, roc_auc)
-    )
-)
-grid_results <- readRDS("grid_results.rds")
-
-### Estracción mejor modelo
-
-#NB
-
-best_resultsNBAYES <- 
-  grid_results |> 
-  extract_workflow_set_result("receta_NB") |> 
-  select_best(metric = "roc_auc")
-
-best_resultsNBAYES
-
-NBAYES_test_results <- 
-   grid_results |> 
-   extract_workflow("receta_NB") |> 
-   finalize_workflow(best_resultsNBAYES) |> 
-   fit(base_train)
-
-#LR
-
-best_resultsLR <- 
-  grid_results |> 
-  extract_workflow_set_result("receta_LR") |> 
-  select_best(metric = "roc_auc")
-
-best_resultsLR
-
-LR_test_results <- 
-   grid_results |> 
-   extract_workflow("receta_LR") |> 
-   finalize_workflow(best_resultsLR) |> 
-   fit(base_train)#NB
-
-
-#QDA
-
-best_resultsQDA <- 
-  grid_results |> 
-  extract_workflow_set_result("receta_QDA") |> 
-  select_best(metric = "roc_auc")
-
-best_resultsQDA
-
-QDA_test_results <- 
-   grid_results |> 
-   extract_workflow("receta_QDA") |> 
-   finalize_workflow(best_resultsQDA) |> 
-   fit(base_train)
-
-#LDA
-
-best_resultsLDA <- 
-  grid_results |> 
-  extract_workflow_set_result("receta_LDA") |> 
-  select_best(metric = "roc_auc")
-
-best_resultsLDA
-
-LDA_test_results <- 
-   grid_results |> 
-   extract_workflow("receta_LDA") |> 
-   finalize_workflow(best_resultsLDA) |> 
-   fit(base_train)
-
+fit_modelos <- function(modelo_spec, data){
+  workflow <- workflow() %>%
+    add_recipe(rec) %>%
+    add_model(modelo_spec)
+  
+  fit <- fit(workflow, data = train_data)
+  
+  f2 <- augment(fit, new_data = test_data) %>%
+    accuracy(truth = label, estimate = .pred_class)
+  
+  f3 <- augment(fit, new_data = test_data) %>%
+    f_meas(truth = label, estimate = .pred_class)
+  
+  f4 <- augment(fit, new_data = test_data) %>%
+    recall(truth = label, estimate = .pred_class)
+  
+  f5 <- augment(fit, new_data = test_data) %>%
+    precision(truth = label, estimate = .pred_class)
+  
+  f6 <- augment(fit, new_data = test_data) %>%
+    mcc(truth = label, estimate = .pred_class)
+  
+  return(list(Accuracy = f2$.estimate, 
+              F_Measure = f3$.estimate, 
+              Recall = f4$.estimate, 
+              Precision = f5$.estimate, 
+              MCC = f6$.estimate))
+}
 
 
 ```
 
+Después de correr cada modelo y validar sus métricas obtuvimos lo siguiente:
+
+
+Con lo cual el mejor modelo de clasificación para este es el modelo ______. Esta es su matriz de confusión en el grupo de testeo, y sus métricas de desempeño. 
+
+
+
+```{r, include=FALSE, message=FALSE, warning=FALSE, cache=TRUE}
+fit_modelos(lda_spec, train_data_pca)
+
+fit_modelos(qda_spec, train_data_pca)
+
+fit_modelos(nb_spec, train_data_pca)
+
+fit_modelos(lr_spec, train_data_pca)
+```
+
+
 
 
 # Ejercicio 2
+En esta segunda parte del reporte se realizó un análisis de clustering sobre la base de datos ```iris```.
+El conjunto de datos Iris, introducido por el biólogo Ronald Fisher en 1936, consiste en mediciones de cuatro variables (longitud y ancho de sépalos y pétalos) de tres especies de flores iris (setosa, versicolor y virginica). Con 50 observaciones por especie, este conjunto ha sido ampliamente utilizado en estadística y aprendizaje automático como ejemplo para técnicas de análisis y clasificación debido a su claridad y tamaño manejable.
 
+Para poder hacer cluster se calculó primero la matriz de distancias euclidianas entre las observaciones sin toma en cuenta el dato de a qué especie pertenecía cada registro, posteriormente se corrieron los algoritmos de clustering ```single```, ```average```, ```complete``` y ```divisive```. Los resultados de estos algoritmos se muestran a continuación.
 
 
 ```{r}
@@ -259,3 +210,5 @@ hclust_average <- hclust(dist_mat, method='average')
 hclust_complete <- hclust(dist_mat, method= 'complete')
 divisive_model <- agnes(dist_mat, method = "single")
 ```
+
+Tomando en cuenta la base original con etiquetas sobre las especies a las que pertenecía cada registro notamos lo siguiente...
