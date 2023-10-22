@@ -7,6 +7,7 @@ header-includes:
   - \usepackage{listings}
   - \usepackage{color} % si aún no lo has incluido; es necesario para \textcolor
   - \lstset{breaklines=true, postbreak=\mbox{\textcolor{red}{$\hookrightarrow$}\space}}
+  - \usepackage{float}
 
 format:
   html:
@@ -14,89 +15,28 @@ format:
     embed-resources: true
 ---
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
-#Cargamos paquetes
-library(tidymodels)
-library(discrim)
-library(corrr)
-library(paletteer)
-library(MASS)
-library(dslabs)
-library(tidyr)
-
-# Cargamos bases de datos
-mnist_data <- read_mnist()
-data2 <- iris
+```{r, echo=FALSE, message=FALSE, warning=FALSE, cache=TRUE}
+# cargamos librerias y código principal
+library(dplyr)
+library(kableExtra)
+source(paste0(getwd(), "/codigo1.R"))
 ```
 
 # Ejercicio 1
 
-En este reporte se creó un clasificador con la base de datos ```MNIST``` (Modified National Institute of Standards and Technology), esta base es uno de los conjuntos de datos más icónicos en el campo del aprendizaje automático y la visión por computadora. Se compone de un conjunto de imágenes en escala de grises de dígitos escritos a mano, del 0 al 9, y ha sido ampliamente utilizada para entrenar diversos modelos de reconocimiento de imágenes. MNIST contiene 70,000 imágenes en total, divididas en 60,000 imágenes de entrenamiento y 10,000 imágenes de prueba. Cada imagen tiene un tamaño de 28x28 píxeles, lo que da un total de 784 píxeles por imagen. 
+En este reporte se creó un clasificador con la base de datos ```MNIST``` (Modified National Institute of Standards and Technology), esta base es uno de los conjuntos de datos más icónicos en el campo del aprendizaje automático y la visión por computadora. Se compone de un conjunto de imágenes en escala de grises de dígitos escritos a mano, del 0 al 9, y ha sido ampliamente utilizada para entrenar diversos modelos de reconocimiento de imágenes. ```MNIST``` contiene 70,000 imágenes en total, divididas en 60,000 imágenes de entrenamiento y 10,000 imágenes de prueba. Cada imagen tiene un tamaño de 28x28 píxeles, lo que da un total de 784 píxeles por imagen. 
 
-El objetivo de este clasificador era predecir si una imagen contenía un 1, 3 o 5. Para lograr encontrar el mejor clasificador primero se prepararon los datos de tal forma que la variable respuesta fuera de tipo factor y los regresores fueran los pixeles de la imagen. Posteriormente, se procedió a dividir la base de datos en un conjunto de entrenamiento, validación y prueba. El conjunto de entrenamiento y validación se utilizó para encontrar el mejor modelo y el conjunto de prueba para evaluar el desempeño del modelo.  Los modelos que se utilizaron para encontrar el mejor clasificador fueron: LDA, QDA, Naive Bayes y Regresión Logística. 
+El objetivo de este clasificador era predecir si una imagen contenía un 1, 3 o 5. Para lograr encontrar el mejor clasificador primero se prepararon los datos de tal forma que la variable respuesta fuera de tipo factor y los regresores fueran los pixeles de la imagen. Posteriormente, se procedió a dividir la base de datos en un conjunto de entrenamiento, validación y prueba. Para esta división se utilizó el conjunto de prueba que viene con los datos y para el conjunto de validación se utilizó muestreo alteatorio estratificado con respecto a la variable ``label`` con la semilla de `191654`.  El conjunto de entrenamiento y validación se utilizó para encontrar el mejor modelo y el conjunto de prueba para evaluar el desempeño del modelo.  Los modelos que se utilizaron para encontrar el mejor clasificador fueron: LDA, QDA, Naive Bayes y Regresión Logística. 
 
-Además, como la base de datos era muy grande en cuanto al número de regresores potenciales, se decidió reducir la dimensionalidad de los datos con PCA, antes de entrenar los modelos. Para esto, se realizó PCA sobre el conjunto de entrenamiento y se seleccionaron los primeros 50 componentes principales, ya que estos explicaban la mayor parte de la varianza de los datos, utilizamos Scree plot para comprobarlo, como se puede apreciar en la siguiente imagen.
-
-
-
-```{r, include=FALSE, message=FALSE, warning=FALSE}
-#Extraer el train y test
-
-## Preparamos los datos
-
-### Entrenamiento y validacion
-flattened_images <- matrix(mnist_data$train$images, nrow = dim(mnist_data$train$images)[1], ncol = 28*28)
-df <- data.frame(label = mnist_data$train$labels)
-df <- cbind(df, flattened_images)
-
-### Testeo
-
-flattened_images2 <- matrix(mnist_data$test$images, nrow = dim(mnist_data$test$images)[1], ncol = 28*28)
-test_data <- data.frame(label = mnist_data$test$labels)
-test_data <- cbind(test_data, flattened_images2)
-
-## Transformar el train y test al estadístico que deseamos de solo 1, 3 y 5
-
-df <- df  %>% filter(label == 1 | label == 3 | label == 5)
-
-test_data <- test_data %>% filter(label == 1 | label == 3 | label == 5) # data testeo
-test_data$label <- as.factor(test_data$label)
-
-# Spliteamos datos de entrenamiento y validación para elegir el mejor modelo
-
-set.seed(191654)
-### Spliteamos la data para validación y entrenamiento
-data_split <- rsample::initial_split(df, prop = .8, strata = "label")
-
-train_data <- training(data_split) # data train
-train_data$label <- as.factor(train_data$label)
-
-val_data <- testing(data_split) # data validación
-val_data$label <- as.factor(val_data$label)
-
-# Preparación de datos para reducir dimensionalidad con PCA
-
-# Preparamos motores de modelo
+Además, como la base de datos era muy grande en cuanto al número de regresores potenciales, se decidió reducir la dimensionalidad de los datos con PCA, antes de entrenar los modelos. Para esto, se realizó PCA sobre el conjunto de entrenamiento y se seleccionaron los primeros 50 componentes principales, ya que estos explicaban la mayor parte de la varianza de los datos, utilizamos Scree plot para comprobarlo, como se puede apreciar en la @fig-plot1.
 
 
-lda_spec <- discrim_linear() %>%
-  set_mode("classification") %>%
-  set_engine("MASS")
 
-qda_spec <- discrim_quad() %>%
-  set_mode("classification") %>%
-  set_engine("MASS")
-
-nb_spec <- naive_Bayes() %>% 
-  set_mode("classification") %>% 
-  set_engine("klaR") %>% 
-  set_args(usekernel = FALSE)
-
-lr_spec <- logistic_reg() %>%
-  set_engine("glm") %>%
-  set_mode("classification")
-
-
+```{r, echo=FALSE, warning=FALSE, cache=TRUE, label="fig-plot1"}
+#| fig.align='center',
+#| out.width="70%",
+#| fig.pos='H',
+#| fig.cap="Scree plot para seleccionar el número de componentes principales a utilizar en PCA."
 
 # Preparamos receta
 
@@ -120,82 +60,86 @@ filtered_data <- pca_variance[pca_variance$terms == "variance", ]
 ggplot(filtered_data, aes(x = component, y = value)) +
   geom_line() +
   geom_point() +
-  labs(title = "Scree Plot",
-       x = "Principal Component",
-       y = "Cumulative Percent Variance Explained") +
+  labs(title = "Scree plot",
+    x = "Principal Component",
+       y = "Varianza explicada") +
   theme_minimal() +
-  geom_vline(aes(xintercept=50), color="red", linetype="dashed")
+  geom_vline(aes(xintercept=50), color="red", linetype="dashed")+
+  annotate("text", x = 50, y = min(filtered_data$value), label = "x=50", vjust = -2, hjust = -1, color="red") +
+  theme(plot.title = element_text(hjust = 0.5))
 
-#arreglamos receta a 50 componentes
+```
 
-rec <- recipe(label ~ ., data = train_data) %>%
-    #step_zv(all_predictors()) %>%
-  step_center(all_predictors()) %>%
-  step_scale(all_predictors()) %>%
-  step_pca(all_predictors(), num_comp=50)
+Después corrimos cada modelo y validamos métricas importantes de clasificación multiclase mostrados en la @tbl-plot1.
 
-# Preparamos workflows
+```{r, echo=FALSE, warning=FALSE, cache=TRUE}
+source(paste0(getwd(), "/codigo2.R"))
+```
 
-fit_modelos <- function(modelo_spec, data){
-  workflow <- workflow() %>%
+```{r, echo=FALSE,  warning=FALSE, label="tbl-plot1"}
+#| tbl-cap: Resumen de resultados
+library(kableExtra)
+# Mostrar el dataframe con los resultados
+kable(resultados, format = "latex", booktabs = TRUE) |>
+  kable_styling(latex_options = c("scale_down", "H"))
+
+```
+
+
+Con lo cual el mejor modelo de clasificación para este es el modelo QDA, superior en todas las métricas. Estas fueron las macro de Accuracy, Precision, Recall, F-meas, MCC. Donde cada uno entre más alta sea es mejor. La Macro-Accuracy mide la proporción de predicciones correctas para cada clase y luego calcula el promedio. Macro-Precision refleja la cantidad de predicciones positivas correctas para cada clase, frente a todas las predicciones positivas, siendo especialmente relevante cuando las falsas alarmas (falsos positivos) son costosas. Macro-Recall se centra en cuántas observaciones positivas reales de cada clase fueron capturadas por el modelo. Macro-F-meas (Medida F1 macro) ofrece un equilibrio entre Macro-Precision y Macro-Recall, siendo útil en contextos donde ambas métricas son igualmente importantes para todas las clases. Finalmente, Macro-MCC (Coeficiente de correlación de Matthews macro) proporciona una medida de la calidad de las clasificaciones, tomando en cuenta verdaderos y falsos positivos y negativos para cada clase y calculando el promedio. 
+
+Y el desempeño final de este clasificador con el conjunto de prueba fue el siguiente:
+
+```{r, echo=FALSE,  warning=FALSE, cache=TRUE}
+resultado2 <- fit_modelos2(qda_spec, train_data)
+  
+resultados_test <- as.data.frame(list(resultado2))
+
+# Agregar la columna "Modelo" con el valor "QDA"
+resultados_test$Modelo <- "QDA"
+
+# Reordenar las columnas para que "Modelo" sea la primera columna
+resultados_test <- resultados_test[, c("Modelo", "Accuracy", "F_Measure", "Recall", "Precision", "MCC")]
+```
+
+```{r, echo=FALSE, warning=FALSE, label="tbl-plot2"}
+#| tbl-cap: Resumen de resultados QDA
+# Mostrar el dataframe con los resultados
+kable(resultados_test, format = "latex", booktabs = TRUE) %>%
+  kable_styling(latex_options = c("scale_down", "H"))
+
+```
+
+Y su respectiva matriz de confusión.
+
+```{r, echo=FALSE,  warning=FALSE, cache=TRUE}
+#| out.width="70%",
+#| fig.pos='H',
+#| fig.cap="Matriz de confusión para el modelo QDA."
+
+workflowq <- workflow() %>%
     add_recipe(rec) %>%
-    add_model(modelo_spec)
-  
-  fit <- fit(workflow, data = train_data)
-  
-  f2 <- augment(fit, new_data = test_data) %>%
-    accuracy(truth = label, estimate = .pred_class)
-  
-  f3 <- augment(fit, new_data = test_data) %>%
-    f_meas(truth = label, estimate = .pred_class)
-  
-  f4 <- augment(fit, new_data = test_data) %>%
-    recall(truth = label, estimate = .pred_class)
-  
-  f5 <- augment(fit, new_data = test_data) %>%
-    precision(truth = label, estimate = .pred_class)
-  
-  f6 <- augment(fit, new_data = test_data) %>%
-    mcc(truth = label, estimate = .pred_class)
-  
-  return(list(Accuracy = f2$.estimate, 
-              F_Measure = f3$.estimate, 
-              Recall = f4$.estimate, 
-              Precision = f5$.estimate, 
-              MCC = f6$.estimate))
-}
-
-
+    add_model(qda_spec)
+fit <- fit(workflowq, data = train_data)
+# Matriz de confusión
+augment(fit, new_data = test_data) |>
+  conf_mat(truth = label, estimate = .pred_class) |>
+  autoplot(type = "heatmap")
 ```
 
-Después de correr cada modelo y validar sus métricas obtuvimos lo siguiente:
+Con lo cual es excelente para poder clasificar correctamente los dígitos 1, 3 y 5.
 
+El modelo elegido tiene sentido porque...
 
-Con lo cual el mejor modelo de clasificación para este es el modelo ______. Esta es su matriz de confusión en el grupo de testeo, y sus métricas de desempeño. 
-
-
-
-```{r, include=FALSE, message=FALSE, warning=FALSE, cache=TRUE}
-fit_modelos(lda_spec, train_data_pca)
-
-fit_modelos(qda_spec, train_data_pca)
-
-fit_modelos(nb_spec, train_data_pca)
-
-fit_modelos(lr_spec, train_data_pca)
-```
-
-
-
+\newpage
 
 # Ejercicio 2
 En esta segunda parte del reporte se realizó un análisis de clustering sobre la base de datos ```iris```.
-El conjunto de datos Iris, introducido por el biólogo Ronald Fisher en 1936, consiste en mediciones de cuatro variables (longitud y ancho de sépalos y pétalos) de tres especies de flores iris (setosa, versicolor y virginica). Con 50 observaciones por especie, este conjunto ha sido ampliamente utilizado en estadística y aprendizaje automático como ejemplo para técnicas de análisis y clasificación debido a su claridad y tamaño manejable.
+El conjunto de datos ```iris```, introducido por el biólogo Ronald Fisher en 1936, consiste en mediciones de cuatro variables (longitud y ancho de sépalos y pétalos) de tres especies de flores iris (setosa, versicolor y virginica). Con 50 observaciones por especie, este conjunto ha sido ampliamente utilizado en estadística y aprendizaje automático como ejemplo para técnicas de análisis y clasificación debido a su claridad y tamaño manejable.
 
 Para poder hacer cluster se calculó primero la matriz de distancias euclidianas entre las observaciones sin toma en cuenta el dato de a qué especie pertenecía cada registro, posteriormente se corrieron los algoritmos de clustering ```single```, ```average```, ```complete``` y ```divisive```. Los resultados de estos algoritmos se muestran a continuación.
 
-
-```{r}
+```{r, echo=FALSE,  warning=FALSE, cache=TRUE}
 library(cluster)
 
 #Iris DB
@@ -203,12 +147,56 @@ data <- as.matrix(iris[,1:4])
 dist_mat <- dist(data, method = 'euclidean')
 ```
 
-
-```{r}
+```{r, echo=FALSE,  warning=FALSE, cache=TRUE, label="fig-plot2"}
+#| fig-cap: "Dendogramas de los algoritmos de clustering"
+#| layout-ncol: 2
+#| fig-subcap: 
+#|   - "Single Linkage"
+#|   - "Average Linkage"
+#|   - "Complete Linkage"
+#|   - "Divisive Clustering"
 hclust_single <- hclust(dist_mat, method = 'single')
 hclust_average <- hclust(dist_mat, method='average')
 hclust_complete <- hclust(dist_mat, method= 'complete')
 divisive_model <- agnes(dist_mat, method = "single")
+
+
+plot(hclust_single)
+plot(hclust_average)
+plot(hclust_complete)
+plot(divisive_model, which.plots=2)
+
+
 ```
 
 Tomando en cuenta la base original con etiquetas sobre las especies a las que pertenecía cada registro notamos lo siguiente...
+
+```{r, echo=FALSE,  warning=FALSE}
+library(caret)
+cut_single <- cutree(hclust_single, k=3)
+cut_average <- cutree(hclust_average, k=3)
+cut_complete <- cutree(hclust_complete, k=3)
+cut_divisive <- cutree(as.hclust(divisive_model), k=3)  # Convierte el modelo divisive a hclust
+
+calc_metrics <- function(predicted_labels, true_labels) {
+    cm <- confusionMatrix(as.factor(predicted_labels), as.factor(true_labels))
+    list(
+        Accuracy = cm$overall['Accuracy'],
+        F_Measure = cm$byClass['F1'],
+        Recall = cm$byClass['Sensitivity'],
+        Precision = cm$byClass['Precision']
+    )
+}
+#CHECANDO
+
+true_labels <- iris$Species
+
+cut_single
+
+cut_average
+
+cut_complete
+
+cut_divisive
+
+```
