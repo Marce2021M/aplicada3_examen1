@@ -171,7 +171,7 @@ plot(divisive_model, which.plots=2)
 
 Tomando en cuenta la base original con etiquetas sobre las especies a las que pertenecía cada registro notamos lo siguiente...
 
-```{r, echo=FALSE,  warning=FALSE}
+```{r, echo=FALSE,  warning=FALSE, message=FALSE}
 library(caret)
 cut_single <- cutree(hclust_single, k=3)
 cut_average <- cutree(hclust_average, k=3)
