@@ -19,17 +19,83 @@ format:
 # cargamos librerias y código principal
 library(dplyr)
 library(kableExtra)
+library(dslabs)
+# Cargamos bases de datos
+mnist_data <- read_mnist()
+data2 <- iris
 source(paste0(getwd(), "/codigo1.R"))
 ```
 
+\newpage
+
 # Ejercicio 1
 
-En este reporte se creó un clasificador con la base de datos ```MNIST``` (Modified National Institute of Standards and Technology). Se compone de un conjunto de imágenes en escala de grises de dígitos escritos a mano, del 0 al 9, y ha sido ampliamente utilizada para entrenar diversos modelos de reconocimiento de imágenes. ```MNIST``` contiene 70,000 imágenes en total, divididas en 60,000 imágenes de entrenamiento y 10,000 imágenes de prueba. Cada imagen tiene un tamaño de 28x28 píxeles, lo que da un total de 784 píxeles por imagen. 
+En este reporte se creó un clasificador con la base de datos ```MNIST``` (Modified National Institute of Standards and Technology). Se compone de un conjunto de imágenes en escala de grises de dígitos escritos a mano, del 0 al 9, y ha sido ampliamente utilizada para entrenar diversos modelos de reconocimiento de imágenes. ```MNIST``` contiene 70,000 imágenes en total, divididas en 60,000 imágenes(28x28) de entrenamiento y 10,000 imágenes de prueba. 
 
-El objetivo de este clasificador es predecir si una imagen contenía un 1, 3 o 5. Para lograr encontrar el mejor clasificador primero se prepararon los datos de tal forma que la variable respuesta fuera de tipo factor y los regresores fueran los pixeles de la imagen. Posteriormente, se procedió a dividir la base de datos en un conjunto de entrenamiento, validación y prueba. Para esta división se utilizó el conjunto de prueba que viene con los datos y para el conjunto de validación se utilizó muestreo alteatorio estratificado con respecto a la variable ``label`` con la semilla de `191654`.  El conjunto de entrenamiento y validación se utilizó para entrenar y encontrar el mejor modelo y el conjunto de prueba para evaluar el desempeño del modelo.  Los modelos que se utilizaron para encontrar el mejor clasificador fueron: LDA, QDA, Naive Bayes y Regresión Logística. 
+El objetivo de este clasificador es predecir si una imagen contenía un 1, 3 o 5. Para lograr encontrar el mejor clasificador primero se prepararon los datos de tal forma que la variable respuesta fuera de tipo factor y los regresores fueran los pixeles de la imagen. Posteriormente, se procedió a dividir la base de datos en un conjunto de entrenamiento, validación y prueba. Para esta división se utilizó el conjunto de prueba que viene con los datos y para el conjunto de validación se utilizó muestreo alteatorio estratificado con respecto a la variable ``label`` con la semilla de `191654`.  Los modelos que se utilizaron para encontrar el mejor clasificador fueron: LDA, QDA, Naive Bayes y Regresión Logística. 
 
-Además, como la base de datos era muy grande en cuanto al número de regresores potenciales, se decidió reducir la dimensionalidad de los datos con PCA, antes de entrenar los modelos, esto porque no queremos tener la maldición de la dimensionalidad. Para esto, se realizó PCA sobre el conjunto de entrenamiento y se seleccionaron los primeros 50 componentes principales, ya que estos explicaban la mayor parte de la varianza de los datos, utilizamos Scree plot para comprobarlo, como se puede apreciar en la @fig-plot1 que se encuentra en los anexos de este reporte.
+Además, como la base de datos era muy grande en cuanto al número de regresores potenciales, se decidió reducir la dimensionalidad de los datos con PCA, antes de entrenar los modelos. Para esto, se realizó PCA sobre el conjunto de entrenamiento y se seleccionaron los primeros 50 componentes principales, ya que estos explicaban la mayor parte de la varianza de los datos, utilizamos Scree plot para comprobarlo, como se puede apreciar en la @fig-plot1 que se encuentra en los anexos de este reporte.
 
+Después de entrenar cada modelo y validar métricas importantes de clasificación multiclase obtuvimos lo mostrado en @tbl-plot1 (que se encuentra en los anexos). Donde cada métrica entre más alta sea, es mejor. Para elegir el mejor modelo nos guiamos mucho más por la métrica de macro-Accuracy, la cual mide la proporción de predicciones correctas con respecto a todos los datos. Esta sería el complemento de lo que nos daría el error de clasificación. 
+
+Con lo cual el mejor modelo de clasificación fue el modelo QDA, superior en todas las métricas. Este resultado tiene mucho sentido por lo siguiente. En primer lugar, sabemos que la regresión logística es un modelo pésimo para clasificaciones multiclase, por lo que era de esperarse que tuviera peor desempeño. En segundo, lugar notamos que estamos entrenando más de 10,000 datos los cuales sabemos que están acotados en cierto rango y con lo cual si suponemos que vienen de alguna distribución entonces tendrían todos sus momentos y por TCL cualquier estadística que sea función de la suma de estos datos se distrubirá normal, en especial tenemos que el discriminante utilizado en LDA y QDA se distribuirá normal, por lo que es de esperarse que los modelos LDA y QDA tengan cierto desempeño aunque los datos no sean normales, superando al NB porque aprovecha mejor la normalidad asintótica (recordando que en el NB que utilizamos está aproximando las densidades condicionales con una normal). Y por último, notemos que ligeramente QDA es mejor a LDA debido a que la forma en que se escribe 3 y 5 puede tener una mayor variabilidad en los pixeles de las imágenes que la forma en que se ecribe 1, por lo cual QDA describiría un poco mejor los datos que LDA. 
+
+Por último, obviamente elegimos el QDA porque nos interesa más predicción que interpretabilidad o simplicidad.
+
+El desempeño final de este clasificador con el conjunto de prueba se muestra en la  @tbl-plot2 y la matriz de confusión en la @fig-plot3.
+
+
+
+\newpage
+
+# Ejercicio 2
+En esta segunda parte del reporte se realizó un análisis de clustering sobre la base de datos ```iris```.
+El conjunto de datos ```iris```, introducido por el biólogo Ronald Fisher en 1936, consiste en mediciones de cuatro variables (longitud y ancho de sépalos y pétalos) de tres especies de flores iris (setosa, versicolor y virginica). Con 50 observaciones por especie, este conjunto ha sido ampliamente utilizado en estadística y aprendizaje automático como ejemplo para técnicas de análisis y clasificación debido a su claridad y tamaño manejable.
+
+Para poder hacer cluster se calculó primero la matriz de distancias euclidianas entre las observaciones sin tomar en cuenta el dato de a qué especie pertenecía cada registro. Posteriormente se corrieron muchos algoritmos de clustering  pero se decidieron analizar los siguientes ```k-means clustering```, ```average-linkage clustering``` y ```complete-linkage clustering``` . Para el método de k-means se supuso que habían 3 clusters dado que se sabe que hay 3 especies de flores en esa base. Aunque en la vida real no sabremos cuántos clusters hay, de hecho al comparar gráficas de pares de columnas de los datos (véase la @fig-plot4 en los anexos), solo se podían apreciar bien 2 tipos de clusters bien definidos, por lo que hay que tener cuidado al elegir el número de clusters. 
+
+```{r, echo=FALSE,  warning=FALSE, cache=TRUE, message=FALSE}
+source(paste0(getwd(), "/codigo2_2.R"))
+```
+
+Los resultados de los dendogramas de los clusters jerárquicos se pueden apreciar en la @fig-plot2 que se encuentra en los anexos de este reporte. Notamos que en los dos métodos hay dos clusters bien definidos, por lo que necesariamente deben haber al menos dos clases. Sin embargo, cuando analizamos los dendogramas para medir una tercera clase, observamos que realmente no pareciera que esté bien definida por lo que podría ser que no hayan podido clusterizar bien estos métodos, sabiendo que deben haber 3 especies. Con lo cual procedimos a analizar los 3 métodos para conocer el grado de clasificación que tienen con la métrica de `accuracy`, dado que tenemos las etiquetas de los datos, y suponiendo que ciertas clusters se refierían a ciertas etiquetas. Y obtuvimos los datos que se muestran en la tabla.
+
+```{r, echo=FALSE,  warning=FALSE, message=FALSE}
+library(kableExtra)
+# Generar tabla para RMarkdown
+kable(results_df, format = "latex", booktabs = TRUE) |> 
+  kable_styling(latex_options = "H")
+
+```
+
+Por lo tanto, notamos que el mejor método fue ```average-linkage``` y ligeramente mejor que el ```knn```. Esto tiene sentido, porque aunque se vio que era difícil de clasificar tanto por lo visto en los dendogramas como por lo visto en las imágenes de datos, estos métodos podrían sortear mejor este problema, a comparación del ```single-linkage``` que podría desviarse fácilmente al irse a los extremos en sus criterior de separación.  Además, hay que reconocer que el ```average-linkage``` fuera ligeramente mejor sin conocer el número de clusters previamente.
+
+\newpage
+
+# Anexos
+
+## Tablas
+
+```{r, echo=FALSE,  warning=FALSE, label="tbl-plot1"}
+#| tbl-cap: Resumen de resultados
+library(kableExtra)
+# Mostrar el dataframe con los resultados
+kable(resultados, format = "latex", booktabs = TRUE) |>
+  kable_styling(latex_options = c("scale_down", "H"))
+
+```
+
+```{r, echo=FALSE, warning=FALSE, label="tbl-plot2", message=FALSE}
+#| tbl-cap: Resumen de resultados QDA
+# Mostrar el dataframe con los resultados
+library(dplyr)
+library(kableExtra)
+kable(resultados_test, format = "latex", booktabs = TRUE) %>%
+  kable_styling(latex_options = c("scale_down", "H"))
+
+```
+
+## Figuras
 
 ```{r, echo=FALSE, warning=FALSE, cache=TRUE, label="fig-plot1"}
 #| fig.align='center',
@@ -37,24 +103,6 @@ Además, como la base de datos era muy grande en cuanto al número de regresores
 #| fig.pos='H',
 #| fig.cap="Scree plot para seleccionar el número de componentes principales a utilizar en PCA."
 
-# Preparamos receta
-
-rec <- recipe(label ~ ., data = train_data) %>%
-    #step_zv(all_predictors()) %>%
-  step_center(all_predictors()) %>%
-  step_scale(all_predictors()) %>%
-  step_pca(all_predictors(), num_comp=100)
-
-# Realizamos PCA
-
-prep_rec <- prep(rec, training = train_data)
-
-train_data_pca <- bake(prep_rec, new_data = train_data)
-
-# Get variance explained by each component
-pca_variance <- tidy(prep_rec, number = 3, type = "variance")
-
-filtered_data <- pca_variance[pca_variance$terms == "variance", ]
 
 ggplot(filtered_data, aes(x = component, y = value)) +
   geom_line() +
@@ -69,51 +117,7 @@ ggplot(filtered_data, aes(x = component, y = value)) +
 
 ```
 
-Después de entrenar cada modelo y validar métricas importantes de clasificación multiclase obtuvimos lo mostrado en @tbl-plot1 (que se encuentra en los anexos). Donde cada métrica entre más alta sea, es mejor. Para elegir el mejor modelo nos guiamos mucho más por la métrica de macro-Accuracy, la cual mide la proporción de predicciones correctas con respecto a todos los datos. Esta sería el complemento de lo que nos daría el error de clasificación. 
-
-```{r, echo=FALSE, warning=FALSE, cache=TRUE}
-source(paste0(getwd(), "/codigo2.R"))
-```
-
-```{r, echo=FALSE,  warning=FALSE, label="tbl-plot1"}
-#| tbl-cap: Resumen de resultados
-library(kableExtra)
-# Mostrar el dataframe con los resultados
-kable(resultados, format = "latex", booktabs = TRUE) |>
-  kable_styling(latex_options = c("scale_down", "H"))
-
-```
-
-
-Con lo cual el mejor modelo de clasificación fue el modelo QDA, superior en todas las métricas. Este resultado tiene mucho sentido por lo siguiente. En primer lugar, sabemos que la regresión logística es un modelo pésimo para clasificaciones multiclase, por lo que era de esperarse que tuviera peor desempeño. En segundo, lugar notamos que estamos entrenando más de 10,000 datos los cuales sabemos que están acotados en cierto rango y con lo cual si suponemos que vienen de alguna distribución entonces tendrían todos sus momentos y por TCL cualquier estadística que sea función de la suma de estos datos se distrubirá normal, en especial tenemos que el discriminante utilizado en LDA y QDA se distribuirá normal, por lo que es de esperarse que los modelos LDA y QDA tengan cierto desempeño aunque los datos no sean normales, superando al NB porque aprovecha mejor la normalidad asintótica (recordando que en el NB que utilizamos está aproximando las densidades condicionales con una normal). Y por último, notemos que ligeramente QDA es mejor a LDA debido a que la forma en que se escribe 3 y 5 puede tener una mayor variabilidad en los pixeles de las imágenes que la forma en que se ecribe 1, por lo cual QDA describiría un poco mejor los datos que LDA. 
-
-Por último, obviamente elegimos el QDA porque nos interesa más predicción que interpretabilidad o simplicidad.
-
-El desempeño final de este clasificador con el conjunto de prueba fue el siguiente:
-
-```{r, echo=FALSE,  warning=FALSE, cache=TRUE}
-resultado2 <- fit_modelos2(qda_spec, train_data)
-  
-resultados_test <- as.data.frame(list(resultado2))
-
-# Agregar la columna "Modelo" con el valor "QDA"
-resultados_test$Modelo <- "QDA"
-
-# Reordenar las columnas para que "Modelo" sea la primera columna
-resultados_test <- resultados_test[, c("Modelo", "Accuracy", "F_Measure", "Recall", "Precision", "MCC")]
-```
-
-```{r, echo=FALSE, warning=FALSE, label="tbl-plot2"}
-#| tbl-cap: Resumen de resultados QDA
-# Mostrar el dataframe con los resultados
-kable(resultados_test, format = "latex", booktabs = TRUE) %>%
-  kable_styling(latex_options = c("scale_down", "H"))
-
-```
-
-Y su respectiva matriz de confusión.
-
-```{r, echo=FALSE,  warning=FALSE, cache=TRUE}
+```{r, echo=FALSE,  warning=FALSE, cache=TRUE, label="fig-plot3"}
 #| out.width="70%",
 #| fig.pos='H',
 #| fig.cap="Matriz de confusión para el modelo QDA."
@@ -128,86 +132,21 @@ augment(fit, new_data = test_data) |>
   autoplot(type = "heatmap")
 ```
 
-
-
-\newpage
-
-# Ejercicio 2
-En esta segunda parte del reporte se realizó un análisis de clustering sobre la base de datos ```iris```.
-El conjunto de datos ```iris```, introducido por el biólogo Ronald Fisher en 1936, consiste en mediciones de cuatro variables (longitud y ancho de sépalos y pétalos) de tres especies de flores iris (setosa, versicolor y virginica). Con 50 observaciones por especie, este conjunto ha sido ampliamente utilizado en estadística y aprendizaje automático como ejemplo para técnicas de análisis y clasificación debido a su claridad y tamaño manejable.
-
-Para poder hacer cluster se calculó primero la matriz de distancias euclidianas entre las observaciones sin tomar en cuenta el dato de a qué especie pertenecía cada registro. Posteriormente se corrieron muchos algoritmos de clustering  pero se decidieron analizar los siguientes ```k-means clustering```, ```average-linkage clustering``` y ```complete-linkage clustering``` . Para el método de k-means se supuso que habían 3 clusters dado que se sabe que hay 3 especies de flores en esa base. Aunque en la vida real no sabremos cuántos clusters hay, de hecho al comparar gráficas de pares de columnas de los datos (véase la figura 3 en los anexos), solo se podían apreciar bien 2 tipos de clusters bien definidos, por lo que hay que tener cuidado al elegir el número de clusters.
-
-Los resultados de los dendogramas de los clusters jerárquicos se pueden apreciar en la @fig-plot2 que se encuentra en los anexos de este reporte. 
-
-```{r, echo=FALSE,  warning=FALSE, cache=TRUE}
-library(cluster)
-
-#Iris DB
-data <- as.matrix(iris[,1:4])
-dist_mat <- dist(data, method = 'euclidean')
-```
-
-```{r, echo=FALSE,  warning=FALSE, cache=TRUE, label="fig-plot2"}
+```{r, echo=FALSE, message=FALSE, warning=FALSE, cache=TRUE,  fig.position="H",label="fig-plot2"}
 #| fig-cap: "Dendogramas de los algoritmos de clustering"
 #| layout-ncol: 2
 #| fig-subcap: 
 #|   - "Average Linkage"
 #|   - "Complete Linkage"
 
-hclust_average <- hclust(dist_mat, method='average')
-hclust_complete <- hclust(dist_mat, method= 'complete')
-kmean_model <- kmeans(data, centers = 3)
+# Dendogramas
 
 plot(hclust_average)
 plot(hclust_complete)
 
 ```
 
-Notamos que en los dos métodos hay dos clusters bien definidos, por lo que necesariamente deben haber al menos dos clases. Sin embargo, cuando analizamos los dendogramas para medir una tercera clase, observamos que realmente no pareciera que esté bien definida por lo que podría ser que no hayan podido clusterizar bien estos métodos, sabiendo que deben haber 3 especies. Con lo cual procedimos a analizar los 3 métodos para conocer el grado de clasificación que tienen con la métrica de `accuracy`, dado que tenemos las etiquetas de los datos, y suponiendo que ciertas clusters se refierían a ciertas etiquetas. Y obtuvimos los datos de la siguiente tabla.
-
-```{r, echo=FALSE,  warning=FALSE, message=FALSE}
-library(caret)
-
-cut_average <- cutree(hclust_average, k=3)
-cut_complete <- cutree(hclust_complete, k=3)
-
-#CHECANDO
-
-true_labels <- iris$Species
-
-
-
-accuracy_cut_av <- (sum(cut_average[1:50]==1)+sum(cut_average[51:100]==2)+ sum(cut_average[101:150]==3))/150
-
-
-
-accuracy_cut_cp <- (sum(cut_complete[1:50]==1)+sum(cut_complete[51:100]==3)+ sum(cut_complete[101:150]==2))/150
-
-
-
-accuracy_kmeans <- (sum(kmean_model$cluster[1:50]==2)+sum(kmean_model$cluster[51:100]==1)+ sum(kmean_model$cluster[101:150]==3))/150
-
-# Datos para la tabla
-methods <- c("Average Linkage", "Complete Linkage", "K-Means Clustering")
-accuracies <- c(accuracy_cut_av, accuracy_cut_cp, accuracy_kmeans)
-
-# Crear dataframe para la tabla
-results_df <- data.frame(Method = methods, Accuracy = accuracies)
-
-# Generar tabla para RMarkdown
-kable(results_df, format = "latex", booktabs = TRUE) |> 
-  kable_styling(latex_options = "H")
-
-```
-
-Por lo tanto, notamos que el mejor método fue ```average-linkage``` y ligeramente mejor que el ```knn```. Esto tiene sentido, porque aunque se vio que era difícil de clasificar tanto por lo visto en los dendogramas como por lo visto en las imágenes de datos, estos métodos podrían sortear mejor este problema, a comparación del ```single-linkage``` que podría desviarse fácilmente al irse a los extremos en sus criterior de separación.  Además, hay que reconocer que el ```average-linkage``` fuera ligeramente mejor sin conocer el número de clusters.
-
-\newpage
-
-# Anexos
-
-```{r, echo=FALSE,  warning=FALSE, cache=TRUE, label="fig-plot3"}
+```{r, echo=FALSE,message=FALSE,  warning=FALSE, cache=TRUE, label="fig-plot4"}
 #| fig.align='center',
 #| out.width="100%",
 #| fig.pos='H',
